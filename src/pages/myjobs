@@ -1,0 +1,243 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+const API_URL = process.env.REACT_APP_API_URL || 'https://crewmatch-backend-production.up.railway.app/api';
+
+const MyJobs = () => {
+  const navigate = useNavigate();
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [bids, setBids] = useState([]);
+  const [showBidsModal, setShowBidsModal] = useState(false);
+
+  useEffect(() => {
+    fetchMyJobs();
+  }, []);
+
+  const fetchMyJobs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/jobs`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setJobs(data.jobs || []);
+      } else {
+        setError(data.error || 'Failed to fetch jobs');
+      }
+    } catch (err) {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBidsForJob = async (jobId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/jobs/${jobId}/bids`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setBids(data.bids || []);
+      } else {
+        alert(data.error || 'Failed to fetch bids');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+  };
+
+  const handleAcceptBid = async (bidId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/bids/${bidId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'ACCEPTED' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert('✅ Bid accepted! Contractor has been hired.');
+        fetchBidsForJob(selectedJob.id);
+        fetchMyJobs();
+      } else {
+        alert(data.error || 'Failed to accept bid');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+  };
+
+  const handleRejectBid = async (bidId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/bids/${bidId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'REJECTED' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert('Bid rejected');
+        fetchBidsForJob(selectedJob.id);
+      } else {
+        alert(data.error || 'Failed to reject bid');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+  };
+
+  const openBidsModal = async (job) => {
+    setSelectedJob(job);
+    await fetchBidsForJob(job.id);
+    setShowBidsModal(true);
+  };
+
+  const getStatusBadge = (status) => {
+    const colors = {
+      'OPEN': { background: '#D1FAE5', color: '#065F46', text: 'Open' },
+      'FILLED': { background: '#EFF6FF', color: '#0F4C5F', text: 'Filled' }
+    };
+    const s = colors[status] || colors.OPEN;
+    return <span style={{ padding: '0.25rem 0.75rem', background: s.background, color: s.color, borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600' }}>{s.text}</span>;
+  };
+
+  if (loading) {
+    return <div style={styles.loading}>Loading your jobs...</div>;
+  }
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>My Jobs</h1>
+        <button onClick={() => navigate('/post-job')} style={styles.postBtn}>+ Post New Job</button>
+      </div>
+
+      {error && <div style={styles.error}>{error}</div>}
+
+      {jobs.length === 0 ? (
+        <div style={styles.empty}>
+          <span style={styles.emptyIcon}>📋</span>
+          <h3>No jobs posted yet</h3>
+          <p>Post your first job to start receiving bids from contractors!</p>
+          <button onClick={() => navigate('/post-job')} style={styles.emptyBtn}>Post a Job</button>
+        </div>
+      ) : (
+        <div style={styles.jobsList}>
+          {jobs.map(job => (
+            <div key={job.id} style={styles.jobCard}>
+              <div style={styles.jobHeader}>
+                <div>
+                  <h3 style={styles.jobTitle}>{job.title}</h3>
+                  <span style={styles.jobDate}>Posted: {new Date(job.createdAt).toLocaleDateString()}</span>
+                </div>
+                {getStatusBadge(job.status)}
+              </div>
+              <p style={styles.jobDescription}>{job.description}</p>
+              <div style={styles.jobDetails}>
+                <span>📍 {job.location}</span>
+                <span>📅 {new Date(job.startDate).toLocaleDateString()} - {new Date(job.endDate).toLocaleDateString()}</span>
+                <span>⏰ {job.hours} hours</span>
+                <span>💰 ${job.rateMin} - ${job.rateMax}/hr</span>
+              </div>
+              <button
+                onClick={() => openBidsModal(job)}
+                disabled={job.status !== 'OPEN'}
+                style={{ ...styles.viewBidsBtn, ...(job.status !== 'OPEN' && styles.disabledBtn) }}
+              >
+                {job.status === 'OPEN' ? 'View Bids' : 'Job Filled'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Bids Modal */}
+      {showBidsModal && selectedJob && (
+        <div style={styles.modalOverlay} onClick={() => setShowBidsModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h2>Bids for {selectedJob.title}</h2>
+              <button style={styles.modalClose} onClick={() => setShowBidsModal(false)}>✕</button>
+            </div>
+            {bids.length === 0 ? (
+              <div style={styles.noBids}>No bids yet for this job.</div>
+            ) : (
+              <div style={styles.bidsList}>
+                {bids.map(bid => (
+                  <div key={bid.id} style={styles.bidCard}>
+                    <div style={styles.bidHeader}>
+                      <span style={styles.bidAmount}>${bid.proposedRate}/hour</span>
+                      <span style={{ ...styles.bidStatus, ...(bid.status === 'PENDING' ? styles.pending : bid.status === 'ACCEPTED' ? styles.accepted : styles.rejected) }}>
+                        {bid.status}
+                      </span>
+                    </div>
+                    <p><strong>From:</strong> {bid.contractorEmail}</p>
+                    {bid.message && <p><strong>Message:</strong> {bid.message}</p>}
+                    {bid.status === 'PENDING' && (
+                      <div style={styles.bidActions}>
+                        <button onClick={() => handleAcceptBid(bid.id)} style={styles.acceptBtn}>Accept</button>
+                        <button onClick={() => handleRejectBid(bid.id)} style={styles.rejectBtn}>Reject</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const styles = {
+  container: { maxWidth: '1200px', margin: '0 auto', padding: '2rem', minHeight: '100vh', background: '#F9FAFB' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap' },
+  title: { fontSize: '2rem', color: '#1F2937' },
+  postBtn: { padding: '0.75rem 1.5rem', background: '#0F4C5F', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  error: { background: '#FEE2E2', color: '#991B1B', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem' },
+  loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '1.2rem', color: '#6B7280' },
+  empty: { textAlign: 'center', padding: '4rem', background: 'white', borderRadius: '16px' },
+  emptyIcon: { fontSize: '4rem', display: 'block', marginBottom: '1rem' },
+  emptyBtn: { marginTop: '1rem', padding: '0.75rem 1.5rem', background: '#0F4C5F', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  jobsList: { display: 'flex', flexDirection: 'column', gap: '1rem' },
+  jobCard: { background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
+  jobHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' },
+  jobTitle: { margin: 0, fontSize: '1.2rem', color: '#1F2937' },
+  jobDate: { fontSize: '0.75rem', color: '#6B7280' },
+  jobDescription: { color: '#4B5563', marginBottom: '1rem' },
+  jobDetails: { display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem', fontSize: '0.875rem', color: '#6B7280' },
+  viewBidsBtn: { width: '100%', padding: '0.75rem', background: '#0F4C5F', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '0.5rem' },
+  disabledBtn: { background: '#9CA3AF', cursor: 'not-allowed' },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'white', borderRadius: '16px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflow: 'auto' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #E5E7EB' },
+  modalClose: { background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' },
+  noBids: { textAlign: 'center', padding: '2rem', color: '#6B7280' },
+  bidsList: { padding: '1rem' },
+  bidCard: { border: '1px solid #E5E7EB', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' },
+  bidHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
+  bidAmount: { fontSize: '1.2rem', fontWeight: 'bold', color: '#0F4C5F' },
+  bidStatus: { padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem' },
+  pending: { background: '#FEF3C7', color: '#D97706' },
+  accepted: { background: '#D1FAE5', color: '#065F46' },
+  rejected: { background: '#FEE2E2', color: '#991B1B' },
+  bidActions: { display: 'flex', gap: '0.5rem', marginTop: '0.75rem' },
+  acceptBtn: { padding: '0.5rem 1rem', background: '#10B981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
+  rejectBtn: { padding: '0.5rem 1rem', background: '#EF4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }
+};
+
+export default MyJobs;
