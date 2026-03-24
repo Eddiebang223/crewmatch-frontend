@@ -167,13 +167,29 @@ function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
         {user.role === 'GC' ? (
           <>
-            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}><h2>📋</h2><h3>Post New Job</h3><button onClick={() => window.location.href = '/post-job'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Post Job</button></div>
-            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}><h2>👥</h2><h3>View Jobs</h3><button onClick={() => window.location.href = '/my-jobs'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>View Jobs</button></div>
+            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}>
+              <h2>📋</h2>
+              <h3>Post New Job</h3>
+              <button onClick={() => window.location.href = '/post-job'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Post Job</button>
+            </div>
+            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}>
+              <h2>📊</h2>
+              <h3>My Jobs</h3>
+              <button onClick={() => window.location.href = '/my-jobs'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>View My Jobs</button>
+            </div>
           </>
         ) : (
           <>
-            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}><h2>🔍</h2><h3>Find Jobs</h3><button onClick={() => window.location.href = '/jobs'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Browse Jobs</button></div>
-            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}><h2>📝</h2><h3>My Bids</h3><button onClick={() => window.location.href = '/my-bids'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>View Bids</button></div>
+            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}>
+              <h2>🔍</h2>
+              <h3>Find Jobs</h3>
+              <button onClick={() => window.location.href = '/jobs'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Browse Jobs</button>
+            </div>
+            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}>
+              <h2>📝</h2>
+              <h3>My Bids</h3>
+              <button onClick={() => window.location.href = '/my-bids'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>View Bids</button>
+            </div>
           </>
         )}
       </div>
@@ -421,6 +437,317 @@ function MyBids() {
   );
 }
 
+// ========== MY JOBS COMPONENT (For GCs) ==========
+function MyJobs() {
+  const [jobs, setJobs] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const [selectedJob, setSelectedJob] = React.useState(null);
+  const [bids, setBids] = React.useState([]);
+  const [showBidsModal, setShowBidsModal] = React.useState(false);
+
+  React.useEffect(() => {
+    fetchMyJobs();
+  }, []);
+
+  const fetchMyJobs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/jobs`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setJobs(data.jobs || []);
+      } else {
+        setError(data.error || 'Failed to fetch jobs');
+      }
+    } catch (err) {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBidsForJob = async (jobId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/jobs/${jobId}/bids`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setBids(data.bids || []);
+      } else {
+        alert(data.error || 'Failed to fetch bids');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+  };
+
+  const handleAcceptBid = async (bidId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/bids/${bidId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'ACCEPTED' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert('Bid accepted! Contractor has been hired.');
+        fetchBidsForJob(selectedJob.id);
+        fetchMyJobs();
+      } else {
+        alert(data.error || 'Failed to accept bid');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+  };
+
+  const handleRejectBid = async (bidId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/bids/${bidId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'REJECTED' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert('Bid rejected');
+        fetchBidsForJob(selectedJob.id);
+      } else {
+        alert(data.error || 'Failed to reject bid');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+  };
+
+  const openBidsModal = async (job) => {
+    setSelectedJob(job);
+    await fetchBidsForJob(job.id);
+    setShowBidsModal(true);
+  };
+
+  const getStatusBadge = (status) => {
+    const colors = {
+      'OPEN': '#28a745',
+      'FILLED': '#17a2b8',
+      'CLOSED': '#6c757d'
+    };
+    return (
+      <span style={{
+        padding: '4px 12px',
+        background: colors[status] || '#ffc107',
+        color: 'white',
+        borderRadius: '20px',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      }}>
+        {status}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <h2 style={{ color: 'white' }}>Loading your jobs...</h2>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ background: 'white', borderRadius: '10px', padding: '20px 30px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1 style={{ margin: 0, color: '#333' }}>My Jobs</h1>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={() => window.location.href = '/post-job'} style={{ padding: '8px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+              + Post New Job
+            </button>
+            <button onClick={() => window.location.href = '/dashboard'} style={{ padding: '8px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ background: '#f8d7da', color: '#721c24', padding: '12px', borderRadius: '5px', marginBottom: '20px', textAlign: 'center' }}>
+            {error}
+          </div>
+        )}
+
+        {jobs.length === 0 ? (
+          <div style={{ background: 'white', borderRadius: '10px', padding: '60px', textAlign: 'center' }}>
+            <h2 style={{ color: '#666' }}>No jobs posted yet</h2>
+            <p style={{ color: '#999', marginBottom: '20px' }}>Post your first job to start receiving bids from contractors!</p>
+            <button onClick={() => window.location.href = '/post-job'} style={{ padding: '12px 30px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}>
+              Post a Job
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {jobs.map(job => (
+              <div key={job.id} style={{ background: 'white', borderRadius: '10px', padding: '25px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '15px' }}>
+                  <div>
+                    <h2 style={{ margin: 0, color: '#333' }}>{job.title}</h2>
+                    <span style={{ fontSize: '14px', color: '#666' }}>Posted: {new Date(job.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  {getStatusBadge(job.status)}
+                </div>
+                
+                <p style={{ color: '#666', marginBottom: '15px' }}>{job.description}</p>
+                
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' }}>
+                  <span style={{ color: '#666', fontSize: '14px' }}>📍 {job.location}</span>
+                  <span style={{ color: '#666', fontSize: '14px' }}>📅 {new Date(job.startDate).toLocaleDateString()} - {new Date(job.endDate).toLocaleDateString()}</span>
+                  <span style={{ color: '#666', fontSize: '14px' }}>⏰ {job.hours} hours</span>
+                  <span style={{ color: '#667eea', fontSize: '14px', fontWeight: 'bold' }}>💰 ${job.rateMin} - ${job.rateMax}/hr</span>
+                </div>
+                
+                <button
+                  onClick={() => openBidsModal(job)}
+                  disabled={job.status !== 'OPEN'}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: job.status === 'OPEN' ? '#667eea' : '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    cursor: job.status === 'OPEN' ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  {job.status === 'OPEN' ? 'View Bids' : 'Job Filled'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Bids Modal */}
+        {showBidsModal && selectedJob && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            overflow: 'auto'
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '10px',
+              padding: '30px',
+              maxWidth: '600px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ margin: 0 }}>Bids for {selectedJob.title}</h2>
+                <button
+                  onClick={() => setShowBidsModal(false)}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#ddd',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+              
+              {bids.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <p>No bids yet for this job.</p>
+                  <p style={{ color: '#666', fontSize: '14px' }}>Share this job with contractors!</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '15px' }}>
+                  {bids.map(bid => (
+                    <div key={bid.id} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
+                        <h3 style={{ margin: 0, color: '#667eea' }}>${bid.proposedRate}/hour</h3>
+                        <span style={{
+                          padding: '4px 12px',
+                          background: bid.status === 'PENDING' ? '#ffc107' : (bid.status === 'ACCEPTED' ? '#28a745' : '#dc3545'),
+                          color: 'white',
+                          borderRadius: '20px',
+                          fontSize: '12px'
+                        }}>
+                          {bid.status}
+                        </span>
+                      </div>
+                      <p><strong>From:</strong> {bid.contractorEmail}</p>
+                      {bid.message && <p><strong>Message:</strong> {bid.message}</p>}
+                      <p style={{ color: '#999', fontSize: '12px' }}>Submitted: {new Date(bid.createdAt).toLocaleString()}</p>
+                      
+                      {bid.status === 'PENDING' && (
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                          <button
+                            onClick={() => handleAcceptBid(bid.id)}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              background: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '5px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Accept Bid
+                          </button>
+                          <button
+                            onClick={() => handleRejectBid(bid.id)}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              background: '#dc3545',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '5px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Reject Bid
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ========== MAIN APP COMPONENT ==========
 function App() {
   return (
@@ -433,6 +760,7 @@ function App() {
         <Route path="/post-job" element={<PostJob />} />
         <Route path="/jobs" element={<Jobs />} />
         <Route path="/my-bids" element={<MyBids />} />
+        <Route path="/my-jobs" element={<MyJobs />} />
       </Routes>
     </Router>
   );
