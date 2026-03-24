@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
+import Jobs from './pages/Jobs';
+<Routes>
+  <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
+  <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
+  <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register onLogin={handleLogin} />} />
+  <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
+  <Route path="/post-job" element={user && user.role === 'GC' ? <PostJob /> : <Navigate to="/dashboard" />} />
+  <Route path="/jobs" element={user && user.role === 'CONTRACTOR' ? <Jobs /> : <Navigate to="/dashboard" />} />  {/* ← ADD THIS ROUTE */}
+  <Route path="/my-bids" element={user && user.role === 'CONTRACTOR' ? <MyBids /> : <Navigate to="/dashboard" />} />
+  <Route path="/my-jobs" element={user && user.role === 'GC' ? <MyJobs /> : <Navigate to="/dashboard" />} />
+  <Route path="/how-it-works" element={<HowItWorks />} />
+</Routes>
 
 // API base URL
 const API_URL = process.env.REACT_APP_API_URL || 'https://crewmatch-backend.up.railway.app/api';
