@@ -332,4 +332,110 @@ function Jobs() {
             {jobs.map(job => (
               <div key={job.id} style={{ background: 'white', borderRadius: '10px', padding: '25px' }}>
                 <h2>{job.title}</h2>
-                <p
+                <p>{job.description}</p>
+                <div>📍 {job.location} | ⏰ {job.hours} hrs | 💰 ${job.rateMin}-${job.rateMax}/hr</div>
+                <button onClick={() => setSelectedJob(job)} style={{ marginTop: '15px', padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Submit Bid</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {selectedJob && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: 'white', borderRadius: '10px', padding: '30px', maxWidth: '500px', width: '90%' }}>
+              <h2>Submit Bid for {selectedJob.title}</h2>
+              <input type="number" placeholder="Your Bid ($/hour)" value={bidAmount} onChange={(e) => setBidAmount(e.target.value)} style={{ width: '100%', padding: '10px', margin: '10px 0', border: '1px solid #ddd', borderRadius: '5px' }} />
+              <textarea placeholder="Message (optional)" value={bidMessage} onChange={(e) => setBidMessage(e.target.value)} rows="3" style={{ width: '100%', padding: '10px', margin: '10px 0', border: '1px solid #ddd', borderRadius: '5px' }} />
+              <button onClick={handleBid} disabled={submitting} style={{ width: '100%', padding: '10px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>{submitting ? 'Submitting...' : 'Submit Bid'}</button>
+              <button onClick={() => setSelectedJob(null)} style={{ width: '100%', marginTop: '10px', padding: '10px', background: '#ddd', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ========== MY BIDS COMPONENT ==========
+function MyBids() {
+  const [bids, setBids] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+
+  React.useEffect(() => { fetchMyBids(); }, []);
+
+  const fetchMyBids = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/my-bids`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setBids(data.bids || []);
+      } else {
+        setError(data.error || 'Failed to fetch bids');
+      }
+    } catch (err) {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    if (status === 'ACCEPTED') return '#28a745';
+    if (status === 'REJECTED') return '#dc3545';
+    return '#ffc107';
+  };
+
+  if (loading) return <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><h2 style={{ color: 'white' }}>Loading your bids...</h2></div>;
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px' }}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <div style={{ background: 'white', borderRadius: '10px', padding: '20px 30px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1>My Bids</h1>
+          <button onClick={() => window.location.href = '/dashboard'} style={{ padding: '8px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Back</button>
+        </div>
+        {error && <div style={{ background: '#f8d7da', color: '#721c24', padding: '12px', borderRadius: '5px', marginBottom: '20px' }}>{error}</div>}
+        {bids.length === 0 ? (
+          <div style={{ background: 'white', borderRadius: '10px', padding: '60px', textAlign: 'center' }}>
+            <h2>No bids submitted yet</h2>
+            <button onClick={() => window.location.href = '/jobs'} style={{ marginTop: '20px', padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Browse Jobs</button>
+          </div>
+        ) : (
+          bids.map(bid => (
+            <div key={bid.id} style={{ background: 'white', borderRadius: '10px', padding: '20px', marginBottom: '15px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3>Job #{bid.jobId}</h3>
+                <span style={{ padding: '4px 12px', background: getStatusColor(bid.status), color: 'white', borderRadius: '20px', fontSize: '12px' }}>{bid.status}</span>
+              </div>
+              <p><strong>Your Bid:</strong> ${bid.proposedRate}/hour</p>
+              {bid.message && <p><strong>Message:</strong> {bid.message}</p>}
+              <p style={{ color: '#999', fontSize: '12px' }}>Submitted: {new Date(bid.createdAt).toLocaleString()}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ========== MAIN APP COMPONENT ==========
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/post-job" element={<PostJob />} />
+        <Route path="/jobs" element={<Jobs />} />
+        <Route path="/my-bids" element={<MyBids />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
