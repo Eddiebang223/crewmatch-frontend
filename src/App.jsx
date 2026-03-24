@@ -875,7 +875,318 @@ function PostJob() {
     </div>
   );
 }
+// Jobs Page - For contractors to view and bid on jobs
+function Jobs() {
+  const [jobs, setJobs] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const [selectedJob, setSelectedJob] = React.useState(null);
+  const [bidAmount, setBidAmount] = React.useState('');
+  const [bidMessage, setBidMessage] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
 
+  React.useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/jobs`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setJobs(data.jobs || []);
+      } else {
+        setError(data.error || 'Failed to fetch jobs');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBid = async (jobId) => {
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/bids`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          jobId: jobId,
+          proposedRate: parseFloat(bidAmount),
+          message: bidMessage
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert('Bid submitted successfully!');
+        setSelectedJob(null);
+        setBidAmount('');
+        setBidMessage('');
+        fetchJobs(); // Refresh job list
+      } else {
+        alert(data.error || 'Failed to submit bid');
+      }
+    } catch (err) {
+      alert('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      }}>
+        <h2 style={{ color: 'white' }}>Loading jobs...</h2>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '40px 20px'
+    }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{
+          background: 'white',
+          borderRadius: '10px',
+          padding: '20px 30px',
+          marginBottom: '30px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <h1 style={{ margin: 0, color: '#333' }}>Available Jobs</h1>
+          <button
+            onClick={() => window.location.href = '/dashboard'}
+            style={{
+              padding: '8px 20px',
+              background: '#667eea',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Back to Dashboard
+          </button>
+        </div>
+
+        {error && (
+          <div style={{
+            background: '#f8d7da',
+            color: '#721c24',
+            padding: '12px',
+            borderRadius: '5px',
+            marginBottom: '20px',
+            textAlign: 'center'
+          }}>
+            {error}
+          </div>
+        )}
+
+        {jobs.length === 0 ? (
+          <div style={{
+            background: 'white',
+            borderRadius: '10px',
+            padding: '60px',
+            textAlign: 'center'
+          }}>
+            <h2 style={{ color: '#666' }}>No jobs available right now</h2>
+            <p style={{ color: '#999' }}>Check back later for new opportunities!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {jobs.map(job => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onBid={() => setSelectedJob(job)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Bid Modal */}
+        {selectedJob && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '10px',
+              padding: '30px',
+              maxWidth: '500px',
+              width: '90%'
+            }}>
+              <h2 style={{ marginBottom: '20px' }}>Submit Bid</h2>
+              <p><strong>{selectedJob.title}</strong></p>
+              <p style={{ color: '#666', marginBottom: '20px' }}>{selectedJob.description}</p>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  Your Bid Rate ($/hour)
+                </label>
+                <input
+                  type="number"
+                  value={bidAmount}
+                  onChange={(e) => setBidAmount(e.target.value)}
+                  placeholder={`Suggested: $${selectedJob.rateMin} - $${selectedJob.rateMax}`}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '5px'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  Message (optional)
+                </label>
+                <textarea
+                  value={bidMessage}
+                  onChange={(e) => setBidMessage(e.target.value)}
+                  rows="3"
+                  placeholder="Tell the GC why you're the best fit..."
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '5px'
+                  }}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => handleBid(selectedJob.id)}
+                  disabled={submitting || !bidAmount}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: submitting || !bidAmount ? 'not-allowed' : 'pointer',
+                    opacity: submitting || !bidAmount ? 0.6 : 1
+                  }}
+                >
+                  {submitting ? 'Submitting...' : 'Submit Bid'}
+                </button>
+                <button
+                  onClick={() => setSelectedJob(null)}
+                  style={{
+                    padding: '12px 20px',
+                    background: '#ddd',
+                    color: '#666',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Job Card Component
+function JobCard({ job, onBid }) {
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: '10px',
+      padding: '25px',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+      transition: 'transform 0.2s'
+    }}
+    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '15px' }}>
+        <h2 style={{ margin: 0, color: '#333' }}>{job.title}</h2>
+        <span style={{
+          padding: '4px 12px',
+          background: '#e3f2fd',
+          color: '#1976d2',
+          borderRadius: '20px',
+          fontSize: '14px',
+          fontWeight: 'bold'
+        }}>
+          {job.trade}
+        </span>
+      </div>
+      
+      <p style={{ color: '#666', marginBottom: '15px' }}>{job.description}</p>
+      
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' }}>
+        <span style={{ color: '#666', fontSize: '14px' }}>📍 {job.location}</span>
+        <span style={{ color: '#666', fontSize: '14px' }}>
+          📅 {new Date(job.startDate).toLocaleDateString()} - {new Date(job.endDate).toLocaleDateString()}
+        </span>
+        <span style={{ color: '#666', fontSize: '14px' }}>⏰ {job.hours} hours</span>
+        <span style={{ color: '#667eea', fontSize: '14px', fontWeight: 'bold' }}>
+          💰 ${job.rateMin} - ${job.rateMax}/hr
+        </span>
+      </div>
+      
+      <button
+        onClick={onBid}
+        style={{
+          width: '100%',
+          padding: '12px',
+          background: '#667eea',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          cursor: 'pointer'
+        }}
+      >
+        Submit Bid
+      </button>
+    </div>
+  );
+}
 // ========== EXISTING APP COMPONENT - UPDATE THE ROUTES ==========
 function App() {
   return (
@@ -886,6 +1197,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />  {/* ← ADD THIS LINE */}
         <Route path="/post-job" element={<PostJob />} /> 
+        <Route path="/jobs" element={<Jobs />} /> 
       </Routes>
     </Router>
   );
