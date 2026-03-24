@@ -272,3 +272,4 @@ function PostJob() {
     </div>
   );
 }
+export default App;
