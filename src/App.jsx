@@ -1,46 +1,107 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 
-// ========== HOME COMPONENT ==========
-function Home() {
-  return (
-    <div style={{ 
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '20px'
-    }}>
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        textAlign: 'center',
-        color: 'white'
-      }}>
-        <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>🚀 CrewMatch</h1>
-        <p style={{ fontSize: '20px', marginBottom: '40px' }}>
-          Connect Specialty Trade Contractors with General Contractors
-        </p>
-        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
-          <Link to="/register" style={{ padding: '12px 30px', background: 'white', color: '#667eea', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold' }}>Get Started</Link>
-          <Link to="/login" style={{ padding: '12px 30px', background: 'transparent', color: 'white', textDecoration: 'none', borderRadius: '8px', border: '2px solid white', fontWeight: 'bold' }}>Sign In</Link>
+// API base URL
+const API_URL = process.env.REACT_APP_API_URL || 'https://crewmatch-backend.up.railway.app/api';
+
+// ========== STYLES ==========
+const colors = {
+  primary: '#3B82F6',
+  primaryDark: '#2563EB',
+  secondary: '#8B5CF6',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  dark: '#1F2937',
+  light: '#F3F4F6',
+  white: '#FFFFFF',
+};
+
+// ========== COMPONENTS ==========
+const Navbar = ({ user, onLogout }) => (
+  <nav style={styles.navbar}>
+    <div style={styles.navContainer}>
+      <Link to="/" style={styles.logo}>🚀 CrewMatch</Link>
+      <div style={styles.navLinks}>
+        {user ? (
+          <>
+            <span style={styles.welcome}>Welcome, {user.name}</span>
+            <button onClick={onLogout} style={styles.logoutBtn}>Logout</button>
+          </>
+        ) : (
+          <>
+            <Link to="/login" style={styles.navLink}>Login</Link>
+            <Link to="/register" style={styles.registerBtn}>Sign Up</Link>
+          </>
+        )}
+      </div>
+    </div>
+  </nav>
+);
+
+const Card = ({ children, title, icon }) => (
+  <div style={styles.card}>
+    {icon && <div style={styles.cardIcon}>{icon}</div>}
+    {title && <h3 style={styles.cardTitle}>{title}</h3>}
+    {children}
+  </div>
+);
+
+const Button = ({ children, onClick, variant = 'primary', disabled, fullWidth }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      ...styles.button,
+      ...styles.buttonVariants[variant],
+      ...(fullWidth && styles.fullWidth),
+      ...(disabled && styles.buttonDisabled)
+    }}
+  >
+    {children}
+  </button>
+);
+
+// ========== PAGES ==========
+const Home = () => (
+  <div style={styles.hero}>
+    <div style={styles.heroContent}>
+      <h1 style={styles.heroTitle}>Connect with Top Construction Professionals</h1>
+      <p style={styles.heroSubtitle}>CrewMatch connects General Contractors with skilled tradespeople. Post jobs, get bids, and hire in hours, not days.</p>
+      <div style={styles.heroButtons}>
+        <Link to="/register" style={styles.primaryBtn}>Get Started →</Link>
+        <Link to="/login" style={styles.secondaryBtn}>Sign In</Link>
+      </div>
+      <div style={styles.features}>
+        <div style={styles.feature}>
+          <span style={styles.featureIcon}>📋</span>
+          <span>Post Jobs</span>
+        </div>
+        <div style={styles.feature}>
+          <span style={styles.featureIcon}>🤝</span>
+          <span>Get Bids</span>
+        </div>
+        <div style={styles.feature}>
+          <span style={styles.featureIcon}>💳</span>
+          <span>Pay Securely</span>
         </div>
       </div>
     </div>
-  );
-}
+  </div>
+);
 
-// ========== LOGIN COMPONENT ==========
-function Login() {
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
+const Login = ({ onLogin }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -49,7 +110,7 @@ function Login() {
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        window.location.href = '/dashboard';
+        onLogin(data.user);
       } else {
         setError(data.error || 'Login failed');
       }
@@ -61,45 +122,58 @@ function Login() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ maxWidth: '400px', width: '100%', margin: '20px', padding: '40px', background: 'white', borderRadius: '10px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Sign In</h2>
-        {error && <div style={{ background: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>{error}</div>}
+    <div style={styles.authContainer}>
+      <Card title="Welcome Back" icon="🔐">
         <form onSubmit={handleSubmit}>
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: '100%', padding: '12px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: '100%', padding: '12px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>{loading ? 'Signing in...' : 'Sign In'}</button>
+          {error && <div style={styles.errorMsg}>{error}</div>}
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={styles.input}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={styles.input}
+          />
+          <Button type="submit" disabled={loading} fullWidth>
+            {loading ? 'Signing in...' : 'Sign In'}
+          </Button>
         </form>
-        <p style={{ textAlign: 'center', marginTop: '20px' }}>Don't have an account? <Link to="/register">Register</Link></p>
-      </div>
+        <p style={styles.authFooter}>
+          Don't have an account? <Link to="/register">Sign up</Link>
+        </p>
+      </Card>
     </div>
   );
-}
+};
 
-// ========== REGISTER COMPONENT ==========
-function Register() {
-  const [formData, setFormData] = React.useState({ name: '', email: '', password: '', role: 'GC', companyName: '' });
-  const [message, setMessage] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
+const Register = ({ onLogin }) => {
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'CONTRACTOR', companyName: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setMessage('');
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/register`, {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
       const data = await response.json();
       if (response.ok) {
-        setMessage('Registration successful! Redirecting...');
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        setTimeout(() => { window.location.href = '/dashboard'; }, 2000);
+        onLogin(data.user);
       } else {
         setError(data.error || 'Registration failed');
       }
@@ -110,660 +184,193 @@ function Register() {
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ maxWidth: '450px', width: '100%', margin: '20px', padding: '40px', background: 'white', borderRadius: '10px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>Create Account</h2>
-        {message && <div style={{ background: '#d4edda', color: '#155724', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>{message}</div>}
-        {error && <div style={{ background: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>{error}</div>}
+    <div style={styles.authContainer}>
+      <Card title="Create Account" icon="✨">
         <form onSubmit={handleSubmit}>
-          <input type="text" name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} required style={{ width: '100%', padding: '12px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} required style={{ width: '100%', padding: '12px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} required style={{ width: '100%', padding: '12px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          <select name="role" value={formData.role} onChange={handleChange} style={{ width: '100%', padding: '12px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '5px' }}>
-            <option value="GC">General Contractor (GC)</option>
-            <option value="CONTRACTOR">Contractor</option>
+          {error && <div style={styles.errorMsg}>{error}</div>}
+          <input
+            type="text"
+            name="name"
+            placeholder="Full Name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+            style={styles.input}
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            required
+            style={styles.input}
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            required
+            style={styles.input}
+          />
+          <select
+            name="role"
+            value={formData.role}
+            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+            style={styles.select}
+          >
+            <option value="CONTRACTOR">I am a Contractor</option>
+            <option value="GC">I am a General Contractor</option>
           </select>
-          <input type="text" name="companyName" placeholder={formData.role === 'GC' ? "Company Name" : "Business Name"} value={formData.companyName} onChange={handleChange} style={{ width: '100%', padding: '12px', marginBottom: '20px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>{loading ? 'Registering...' : 'Register'}</button>
+          <input
+            type="text"
+            name="companyName"
+            placeholder={formData.role === 'GC' ? "Company Name" : "Business Name"}
+            value={formData.companyName}
+            onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+            style={styles.input}
+          />
+          <Button type="submit" disabled={loading} fullWidth>
+            {loading ? 'Creating Account...' : 'Sign Up'}
+          </Button>
         </form>
-        <p style={{ textAlign: 'center', marginTop: '20px' }}>Already have an account? <Link to="/login">Sign In</Link></p>
-      </div>
+        <p style={styles.authFooter}>
+          Already have an account? <Link to="/login">Sign in</Link>
+        </p>
+      </Card>
     </div>
   );
-}
+};
 
-// ========== DASHBOARD COMPONENT ==========
-function Dashboard() {
-  const [user, setUser] = React.useState(null);
-  
-  React.useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) setUser(JSON.parse(storedUser));
-  }, []);
-  
+const Dashboard = ({ user }) => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/';
   };
-  
-  if (!user) return <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><h2 style={{ color: 'white' }}>Loading...</h2></div>;
-  
-  return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '20px' }}>
-      <div style={{ background: 'white', borderRadius: '10px', padding: '20px 30px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, color: '#667eea' }}>🚀 CrewMatch</h2>
-        <div><span style={{ marginRight: '20px', color: '#666' }}>Welcome, {user.name}!</span><button onClick={handleLogout} style={{ padding: '8px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Logout</button></div>
-      </div>
-      <div style={{ background: 'white', borderRadius: '10px', padding: '30px', textAlign: 'center', marginBottom: '30px' }}>
-        <h1>Welcome to CrewMatch! 🎉</h1>
-        <p style={{ fontSize: '18px', color: '#666' }}>{user.role === 'GC' ? 'Post jobs and find qualified contractors instantly.' : 'Find jobs and grow your contracting business.'}</p>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-        {user.role === 'GC' ? (
-          <>
-            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}>
-              <h2>📋</h2>
-              <h3>Post New Job</h3>
-              <button onClick={() => window.location.href = '/post-job'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Post Job</button>
-            </div>
-            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}>
-              <h2>📊</h2>
-              <h3>My Jobs</h3>
-              <button onClick={() => window.location.href = '/my-jobs'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>View My Jobs</button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}>
-              <h2>🔍</h2>
-              <h3>Find Jobs</h3>
-              <button onClick={() => window.location.href = '/jobs'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Browse Jobs</button>
-            </div>
-            <div style={{ background: 'white', borderRadius: '10px', padding: '25px', textAlign: 'center' }}>
-              <h2>📝</h2>
-              <h3>My Bids</h3>
-              <button onClick={() => window.location.href = '/my-bids'} style={{ padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>View Bids</button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ========== POST JOB COMPONENT ==========
-function PostJob() {
-  const [formData, setFormData] = React.useState({
-    title: '', trade: 'ELECTRICIAN', description: '', location: '', startDate: '', endDate: '', hours: '', rateMin: '', rateMax: ''
-  });
-  const [loading, setLoading] = React.useState(false);
-  const [message, setMessage] = React.useState('');
-  const [error, setError] = React.useState('');
-  const trades = ['ELECTRICIAN', 'PLUMBER', 'HVAC', 'CARPENTER', 'MASON', 'PAINTER', 'ROOFER', 'OTHER'];
-
-  const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setMessage('');
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/jobs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(formData)
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setMessage('✅ Job posted successfully!');
-        setTimeout(() => { window.location.href = '/dashboard'; }, 2000);
-      } else {
-        setError(data.error || 'Failed to post job');
-      }
-    } catch (err) {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto', background: 'white', borderRadius: '10px', padding: '40px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h1>Post a New Job</h1>
-          <button onClick={() => window.location.href = '/dashboard'} style={{ padding: '8px 16px', background: '#ddd', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Back</button>
+    <div style={styles.dashboard}>
+      <Navbar user={user} onLogout={handleLogout} />
+      <div style={styles.dashboardContent}>
+        <div style={styles.welcomeSection}>
+          <h1>Welcome back, {user.name}! 👋</h1>
+          <p>{user.role === 'GC' ? 'Post jobs and find qualified contractors instantly.' : 'Find jobs and grow your contracting business.'}</p>
         </div>
-        {message && <div style={{ background: '#d4edda', color: '#155724', padding: '12px', borderRadius: '5px', marginBottom: '20px' }}>{message}</div>}
-        {error && <div style={{ background: '#f8d7da', color: '#721c24', padding: '12px', borderRadius: '5px', marginBottom: '20px' }}>{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <input type="text" name="title" placeholder="Job Title" value={formData.title} onChange={handleChange} required style={{ width: '100%', padding: '10px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          <select name="trade" value={formData.trade} onChange={handleChange} style={{ width: '100%', padding: '10px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '5px' }}>{trades.map(t => <option key={t} value={t}>{t}</option>)}</select>
-          <textarea name="description" placeholder="Description" value={formData.description} onChange={handleChange} required rows="4" style={{ width: '100%', padding: '10px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          <input type="text" name="location" placeholder="Location" value={formData.location} onChange={handleChange} required style={{ width: '100%', padding: '10px', marginBottom: '15px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-            <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }} />
-            <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} required style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '30px' }}>
-            <input type="number" name="hours" placeholder="Hours" value={formData.hours} onChange={handleChange} required style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }} />
-            <input type="number" name="rateMin" placeholder="Min Rate" value={formData.rateMin} onChange={handleChange} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }} />
-            <input type="number" name="rateMax" placeholder="Max Rate" value={formData.rateMax} onChange={handleChange} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }} />
-          </div>
-          <button type="submit" disabled={loading} style={{ width: '100%', padding: '14px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}>{loading ? 'Posting...' : 'Post Job'}</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ========== JOBS COMPONENT (with Bidding) ==========
-function Jobs() {
-  const [jobs, setJobs] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
-  const [selectedJob, setSelectedJob] = React.useState(null);
-  const [bidAmount, setBidAmount] = React.useState('');
-  const [bidMessage, setBidMessage] = React.useState('');
-  const [submitting, setSubmitting] = React.useState(false);
-  const [successMessage, setSuccessMessage] = React.useState('');
-
-  React.useEffect(() => { fetchJobs(); }, []);
-
-  const fetchJobs = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/jobs`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setJobs(data.jobs || []);
-      } else {
-        setError(data.error || 'Failed to fetch jobs');
-      }
-    } catch (err) {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBid = async () => {
-    if (!bidAmount) {
-      alert('Please enter a bid amount');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/bids`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ jobId: selectedJob.id, proposedRate: parseFloat(bidAmount), message: bidMessage })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setSuccessMessage(`✅ Bid submitted successfully for ${selectedJob.title}!`);
-        setSelectedJob(null);
-        setBidAmount('');
-        setBidMessage('');
-        setTimeout(() => setSuccessMessage(''), 3000);
-      } else {
-        alert(data.error || 'Failed to submit bid');
-      }
-    } catch (err) {
-      alert('Network error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (loading) return <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><h2 style={{ color: 'white' }}>Loading jobs...</h2></div>;
-
-  return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ background: 'white', borderRadius: '10px', padding: '20px 30px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1>Available Jobs</h1>
-          <button onClick={() => window.location.href = '/dashboard'} style={{ padding: '8px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Back</button>
+        <div style={styles.grid}>
+          {user.role === 'GC' ? (
+            <>
+              <Card title="Post a Job" icon="📋">
+                <p>Create a new job posting and get bids from qualified contractors.</p>
+                <Button onClick={() => window.location.href = '/post-job'}>Post Job →</Button>
+              </Card>
+              <Card title="My Jobs" icon="📊">
+                <p>View all your active and completed jobs.</p>
+                <Button onClick={() => window.location.href = '/my-jobs'} variant="secondary">View Jobs →</Button>
+              </Card>
+            </>
+          ) : (
+            <>
+              <Card title="Find Work" icon="🔍">
+                <p>Browse available jobs in your area and submit bids.</p>
+                <Button onClick={() => window.location.href = '/jobs'}>Find Jobs →</Button>
+              </Card>
+              <Card title="My Bids" icon="📝">
+                <p>Track your submitted bids and see their status.</p>
+                <Button onClick={() => window.location.href = '/my-bids'} variant="secondary">View Bids →</Button>
+              </Card>
+            </>
+          )}
         </div>
-        {successMessage && <div style={{ background: '#d4edda', color: '#155724', padding: '12px', borderRadius: '5px', marginBottom: '20px', textAlign: 'center' }}>{successMessage}</div>}
-        {error && <div style={{ background: '#f8d7da', color: '#721c24', padding: '12px', borderRadius: '5px', marginBottom: '20px', textAlign: 'center' }}>{error}</div>}
-        {jobs.length === 0 ? (
-          <div style={{ background: 'white', borderRadius: '10px', padding: '60px', textAlign: 'center' }}>
-            <h2>No jobs available</h2>
-            <button onClick={() => window.location.href = '/dashboard'} style={{ marginTop: '20px', padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Back to Dashboard</button>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: '20px' }}>
-            {jobs.map(job => (
-              <div key={job.id} style={{ background: 'white', borderRadius: '10px', padding: '25px' }}>
-                <h2>{job.title}</h2>
-                <p>{job.description}</p>
-                <div>📍 {job.location} | ⏰ {job.hours} hrs | 💰 ${job.rateMin}-${job.rateMax}/hr</div>
-                <button onClick={() => setSelectedJob(job)} style={{ marginTop: '15px', padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Submit Bid</button>
-              </div>
-            ))}
-          </div>
-        )}
-        {selectedJob && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: 'white', borderRadius: '10px', padding: '30px', maxWidth: '500px', width: '90%' }}>
-              <h2>Submit Bid for {selectedJob.title}</h2>
-              <input type="number" placeholder="Your Bid ($/hour)" value={bidAmount} onChange={(e) => setBidAmount(e.target.value)} style={{ width: '100%', padding: '10px', margin: '10px 0', border: '1px solid #ddd', borderRadius: '5px' }} />
-              <textarea placeholder="Message (optional)" value={bidMessage} onChange={(e) => setBidMessage(e.target.value)} rows="3" style={{ width: '100%', padding: '10px', margin: '10px 0', border: '1px solid #ddd', borderRadius: '5px' }} />
-              <button onClick={handleBid} disabled={submitting} style={{ width: '100%', padding: '10px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>{submitting ? 'Submitting...' : 'Submit Bid'}</button>
-              <button onClick={() => setSelectedJob(null)} style={{ width: '100%', marginTop: '10px', padding: '10px', background: '#ddd', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancel</button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
-}
+};
 
-// ========== MY BIDS COMPONENT ==========
-function MyBids() {
-  const [bids, setBids] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
+// Placeholder components for other pages
+const PostJob = () => <div style={styles.pagePlaceholder}>Post Job Page - Coming Soon</div>;
+const Jobs = () => <div style={styles.pagePlaceholder}>Jobs Page - Coming Soon</div>;
+const MyBids = () => <div style={styles.pagePlaceholder}>My Bids Page - Coming Soon</div>;
+const MyJobs = () => <div style={styles.pagePlaceholder}>My Jobs Page - Coming Soon</div>;
 
-  React.useEffect(() => { fetchMyBids(); }, []);
+// ========== MAIN APP ==========
+const App = () => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const fetchMyBids = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/my-bids`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setBids(data.bids || []);
-      } else {
-        setError(data.error || 'Failed to fetch bids');
-      }
-    } catch (err) {
-      setError('Network error');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
     }
-  };
-
-  const getStatusColor = (status) => {
-    if (status === 'ACCEPTED') return '#28a745';
-    if (status === 'REJECTED') return '#dc3545';
-    return '#ffc107';
-  };
-
-  if (loading) return <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><h2 style={{ color: 'white' }}>Loading your bids...</h2></div>;
-
-  return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <div style={{ background: 'white', borderRadius: '10px', padding: '20px 30px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1>My Bids</h1>
-          <button onClick={() => window.location.href = '/dashboard'} style={{ padding: '8px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Back</button>
-        </div>
-        {error && <div style={{ background: '#f8d7da', color: '#721c24', padding: '12px', borderRadius: '5px', marginBottom: '20px' }}>{error}</div>}
-        {bids.length === 0 ? (
-          <div style={{ background: 'white', borderRadius: '10px', padding: '60px', textAlign: 'center' }}>
-            <h2>No bids submitted yet</h2>
-            <button onClick={() => window.location.href = '/jobs'} style={{ marginTop: '20px', padding: '10px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Browse Jobs</button>
-          </div>
-        ) : (
-          bids.map(bid => (
-            <div key={bid.id} style={{ background: 'white', borderRadius: '10px', padding: '20px', marginBottom: '15px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3>Job #{bid.jobId}</h3>
-                <span style={{ padding: '4px 12px', background: getStatusColor(bid.status), color: 'white', borderRadius: '20px', fontSize: '12px' }}>{bid.status}</span>
-              </div>
-              <p><strong>Your Bid:</strong> ${bid.proposedRate}/hour</p>
-              {bid.message && <p><strong>Message:</strong> {bid.message}</p>}
-              <p style={{ color: '#999', fontSize: '12px' }}>Submitted: {new Date(bid.createdAt).toLocaleString()}</p>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ========== MY JOBS COMPONENT (For GCs) ==========
-function MyJobs() {
-  const [jobs, setJobs] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
-  const [selectedJob, setSelectedJob] = React.useState(null);
-  const [bids, setBids] = React.useState([]);
-  const [showBidsModal, setShowBidsModal] = React.useState(false);
-
-  React.useEffect(() => {
-    fetchMyJobs();
+    setLoading(false);
   }, []);
 
-  const fetchMyJobs = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/jobs`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setJobs(data.jobs || []);
-      } else {
-        setError(data.error || 'Failed to fetch jobs');
-      }
-    } catch (err) {
-      setError('Network error');
-    } finally {
-      setLoading(false);
-    }
+  const handleLogin = (userData) => {
+    setUser(userData);
+    window.location.href = '/dashboard';
   };
 
-  const fetchBidsForJob = async (jobId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/jobs/${jobId}/bids`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setBids(data.bids || []);
-      } else {
-        alert(data.error || 'Failed to fetch bids');
-      }
-    } catch (err) {
-      alert('Network error');
-    }
-  };
+  if (loading) return <div style={styles.loading}>Loading...</div>;
 
-  const handleAcceptBid = async (bidId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/bids/${bidId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: 'ACCEPTED' })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        alert('Bid accepted! Contractor has been hired.');
-        fetchBidsForJob(selectedJob.id);
-        fetchMyJobs();
-      } else {
-        alert(data.error || 'Failed to accept bid');
-      }
-    } catch (err) {
-      alert('Network error');
-    }
-  };
-
-  const handleRejectBid = async (bidId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/bids/${bidId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: 'REJECTED' })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        alert('Bid rejected');
-        fetchBidsForJob(selectedJob.id);
-      } else {
-        alert(data.error || 'Failed to reject bid');
-      }
-    } catch (err) {
-      alert('Network error');
-    }
-  };
-
-  const openBidsModal = async (job) => {
-    setSelectedJob(job);
-    await fetchBidsForJob(job.id);
-    setShowBidsModal(true);
-  };
-
-  const getStatusBadge = (status) => {
-    const colors = {
-      'OPEN': '#28a745',
-      'FILLED': '#17a2b8',
-      'CLOSED': '#6c757d'
-    };
-    return (
-      <span style={{
-        padding: '4px 12px',
-        background: colors[status] || '#ffc107',
-        color: 'white',
-        borderRadius: '20px',
-        fontSize: '12px',
-        fontWeight: 'bold'
-      }}>
-        {status}
-      </span>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <h2 style={{ color: 'white' }}>Loading your jobs...</h2>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '40px 20px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ background: 'white', borderRadius: '10px', padding: '20px 30px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ margin: 0, color: '#333' }}>My Jobs</h1>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={() => window.location.href = '/post-job'} style={{ padding: '8px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-              + Post New Job
-            </button>
-            <button onClick={() => window.location.href = '/dashboard'} style={{ padding: '8px 20px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-
-        {error && (
-          <div style={{ background: '#f8d7da', color: '#721c24', padding: '12px', borderRadius: '5px', marginBottom: '20px', textAlign: 'center' }}>
-            {error}
-          </div>
-        )}
-
-        {jobs.length === 0 ? (
-          <div style={{ background: 'white', borderRadius: '10px', padding: '60px', textAlign: 'center' }}>
-            <h2 style={{ color: '#666' }}>No jobs posted yet</h2>
-            <p style={{ color: '#999', marginBottom: '20px' }}>Post your first job to start receiving bids from contractors!</p>
-            <button onClick={() => window.location.href = '/post-job'} style={{ padding: '12px 30px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}>
-              Post a Job
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: '20px' }}>
-            {jobs.map(job => (
-              <div key={job.id} style={{ background: 'white', borderRadius: '10px', padding: '25px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '15px' }}>
-                  <div>
-                    <h2 style={{ margin: 0, color: '#333' }}>{job.title}</h2>
-                    <span style={{ fontSize: '14px', color: '#666' }}>Posted: {new Date(job.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  {getStatusBadge(job.status)}
-                </div>
-                
-                <p style={{ color: '#666', marginBottom: '15px' }}>{job.description}</p>
-                
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' }}>
-                  <span style={{ color: '#666', fontSize: '14px' }}>📍 {job.location}</span>
-                  <span style={{ color: '#666', fontSize: '14px' }}>📅 {new Date(job.startDate).toLocaleDateString()} - {new Date(job.endDate).toLocaleDateString()}</span>
-                  <span style={{ color: '#666', fontSize: '14px' }}>⏰ {job.hours} hours</span>
-                  <span style={{ color: '#667eea', fontSize: '14px', fontWeight: 'bold' }}>💰 ${job.rateMin} - ${job.rateMax}/hr</span>
-                </div>
-                
-                <button
-                  onClick={() => openBidsModal(job)}
-                  disabled={job.status !== 'OPEN'}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: job.status === 'OPEN' ? '#667eea' : '#6c757d',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    cursor: job.status === 'OPEN' ? 'pointer' : 'not-allowed'
-                  }}
-                >
-                  {job.status === 'OPEN' ? 'View Bids' : 'Job Filled'}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Bids Modal */}
-        {showBidsModal && selectedJob && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            overflow: 'auto'
-          }}>
-            <div style={{
-              background: 'white',
-              borderRadius: '10px',
-              padding: '30px',
-              maxWidth: '600px',
-              width: '90%',
-              maxHeight: '80vh',
-              overflow: 'auto'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ margin: 0 }}>Bids for {selectedJob.title}</h2>
-                <button
-                  onClick={() => setShowBidsModal(false)}
-                  style={{
-                    padding: '8px 16px',
-                    background: '#ddd',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Close
-                </button>
-              </div>
-              
-              {bids.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                  <p>No bids yet for this job.</p>
-                  <p style={{ color: '#666', fontSize: '14px' }}>Share this job with contractors!</p>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '15px' }}>
-                  {bids.map(bid => (
-                    <div key={bid.id} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-                        <h3 style={{ margin: 0, color: '#667eea' }}>${bid.proposedRate}/hour</h3>
-                        <span style={{
-                          padding: '4px 12px',
-                          background: bid.status === 'PENDING' ? '#ffc107' : (bid.status === 'ACCEPTED' ? '#28a745' : '#dc3545'),
-                          color: 'white',
-                          borderRadius: '20px',
-                          fontSize: '12px'
-                        }}>
-                          {bid.status}
-                        </span>
-                      </div>
-                      <p><strong>From:</strong> {bid.contractorEmail}</p>
-                      {bid.message && <p><strong>Message:</strong> {bid.message}</p>}
-                      <p style={{ color: '#999', fontSize: '12px' }}>Submitted: {new Date(bid.createdAt).toLocaleString()}</p>
-                      
-                      {bid.status === 'PENDING' && (
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                          <button
-                            onClick={() => handleAcceptBid(bid.id)}
-                            style={{
-                              flex: 1,
-                              padding: '10px',
-                              background: '#28a745',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '5px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Accept Bid
-                          </button>
-                          <button
-                            onClick={() => handleRejectBid(bid.id)}
-                            style={{
-                              flex: 1,
-                              padding: '10px',
-                              background: '#dc3545',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '5px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Reject Bid
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ========== MAIN APP COMPONENT ==========
-function App() {
   return (
     <Router>
+      {!user && <Navbar user={null} onLogout={() => {}} />}
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/post-job" element={<PostJob />} />
-        <Route path="/jobs" element={<Jobs />} />
-        <Route path="/my-bids" element={<MyBids />} />
-        <Route path="/my-jobs" element={<MyJobs />} />
+        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
+        <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register onLogin={handleLogin} />} />
+        <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
+        <Route path="/post-job" element={user ? <PostJob /> : <Navigate to="/login" />} />
+        <Route path="/jobs" element={user ? <Jobs /> : <Navigate to="/login" />} />
+        <Route path="/my-bids" element={user ? <MyBids /> : <Navigate to="/login" />} />
+        <Route path="/my-jobs" element={user ? <MyJobs /> : <Navigate to="/login" />} />
       </Routes>
     </Router>
   );
-}
+};
+
+// ========== STYLES ==========
+const styles = {
+  navbar: { background: colors.white, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', position: 'sticky', top: 0, zIndex: 100 },
+  navContainer: { maxWidth: '1200px', margin: '0 auto', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  logo: { fontSize: '1.5rem', fontWeight: 'bold', color: colors.primary, textDecoration: 'none' },
+  navLinks: { display: 'flex', gap: '1rem', alignItems: 'center' },
+  navLink: { color: colors.dark, textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '8px', transition: 'all 0.2s' },
+  registerBtn: { background: colors.primary, color: colors.white, padding: '0.5rem 1rem', borderRadius: '8px', textDecoration: 'none', transition: 'all 0.2s' },
+  welcome: { color: colors.dark, marginRight: '1rem' },
+  logoutBtn: { background: colors.danger, color: colors.white, border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' },
+  hero: { background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`, minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center' },
+  heroContent: { maxWidth: '800px', margin: '0 auto', textAlign: 'center', padding: '4rem 2rem', color: colors.white },
+  heroTitle: { fontSize: '3rem', marginBottom: '1rem' },
+  heroSubtitle: { fontSize: '1.2rem', marginBottom: '2rem', opacity: 0.9 },
+  heroButtons: { display: 'flex', gap: '1rem', justifyContent: 'center', marginBottom: '3rem' },
+  primaryBtn: { background: colors.white, color: colors.primary, padding: '0.75rem 2rem', borderRadius: '8px', textDecoration: 'none', fontWeight: 'bold', transition: 'all 0.2s' },
+  secondaryBtn: { background: 'transparent', color: colors.white, padding: '0.75rem 2rem', borderRadius: '8px', textDecoration: 'none', border: `2px solid ${colors.white}`, fontWeight: 'bold' },
+  features: { display: 'flex', justifyContent: 'center', gap: '2rem', flexWrap: 'wrap' },
+  feature: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' },
+  featureIcon: { fontSize: '2rem' },
+  authContainer: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.light, padding: '2rem' },
+  card: { background: colors.white, borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', maxWidth: '450px', width: '100%', textAlign: 'center' },
+  cardIcon: { fontSize: '3rem', marginBottom: '1rem' },
+  cardTitle: { marginBottom: '1rem', color: colors.dark },
+  input: { width: '100%', padding: '0.75rem', marginBottom: '1rem', border: `1px solid ${colors.light}`, borderRadius: '8px', fontSize: '1rem' },
+  select: { width: '100%', padding: '0.75rem', marginBottom: '1rem', border: `1px solid ${colors.light}`, borderRadius: '8px', fontSize: '1rem', background: colors.white },
+  button: { padding: '0.75rem 1.5rem', borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold', border: 'none', cursor: 'pointer', transition: 'all 0.2s' },
+  buttonVariants: { primary: { background: colors.primary, color: colors.white }, secondary: { background: colors.light, color: colors.dark } },
+  fullWidth: { width: '100%' },
+  buttonDisabled: { opacity: 0.5, cursor: 'not-allowed' },
+  errorMsg: { background: '#FEE2E2', color: colors.danger, padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' },
+  authFooter: { marginTop: '1rem', fontSize: '0.875rem', color: '#6B7280' },
+  dashboard: { minHeight: '100vh', background: colors.light },
+  dashboardContent: { maxWidth: '1200px', margin: '0 auto', padding: '2rem' },
+  welcomeSection: { background: colors.white, borderRadius: '16px', padding: '2rem', marginBottom: '2rem', textAlign: 'center' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' },
+  pagePlaceholder: { minHeight: 'calc(100vh - 64px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', color: colors.dark, background: colors.light },
+  loading: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontSize: '1.2rem', color: colors.dark }
+};
 
 export default App;
