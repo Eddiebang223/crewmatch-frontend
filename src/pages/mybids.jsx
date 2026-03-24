@@ -9,9 +9,7 @@ const MyBids = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchMyBids();
-  }, []);
+  useEffect(() => { fetchMyBids(); }, []);
 
   const fetchMyBids = async () => {
     try {
@@ -39,12 +37,10 @@ const MyBids = () => {
       REJECTED: { background: '#FEE2E2', color: '#991B1B', text: 'Rejected' }
     };
     const s = styles[status] || styles.PENDING;
-    return <span style={{ ...badgeStyles, background: s.background, color: s.color }}>{s.text}</span>;
+    return <span style={{ padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600', background: s.background, color: s.color }}>{s.text}</span>;
   };
 
-  if (loading) {
-    return <div style={styles.loading}>Loading your bids...</div>;
-  }
+  if (loading) return <div style={styles.loading}>Loading your bids...</div>;
 
   return (
     <div style={styles.container}>
@@ -52,9 +48,7 @@ const MyBids = () => {
         <h1 style={styles.title}>My Bids</h1>
         <button onClick={() => navigate('/jobs')} style={styles.browseBtn}>Browse More Jobs</button>
       </div>
-
       {error && <div style={styles.error}>{error}</div>}
-
       {bids.length === 0 ? (
         <div style={styles.empty}>
           <span style={styles.emptyIcon}>📝</span>
@@ -71,19 +65,9 @@ const MyBids = () => {
                 {getStatusBadge(bid.status)}
               </div>
               <div style={styles.bidDetails}>
-                <div style={styles.bidAmount}>
-                  <span>💰 Your Bid:</span>
-                  <strong>${bid.proposedRate}/hour</strong>
-                </div>
-                {bid.message && (
-                  <div style={styles.bidMessage}>
-                    <span>📝 Message:</span>
-                    <p>{bid.message}</p>
-                  </div>
-                )}
-                <div style={styles.bidDate}>
-                  Submitted: {new Date(bid.createdAt).toLocaleString()}
-                </div>
+                <div style={styles.bidAmount}><span>💰 Your Bid:</span><strong>${bid.proposedRate}/hour</strong></div>
+                {bid.message && <div style={styles.bidMessage}><span>📝 Message:</span><p>{bid.message}</p></div>}
+                <div style={styles.bidDate}>Submitted: {new Date(bid.createdAt).toLocaleString()}</div>
               </div>
             </div>
           ))}
@@ -91,13 +75,6 @@ const MyBids = () => {
       )}
     </div>
   );
-};
-
-const badgeStyles = {
-  padding: '0.25rem 0.75rem',
-  borderRadius: '20px',
-  fontSize: '0.75rem',
-  fontWeight: '600'
 };
 
 const styles = {
