@@ -289,7 +289,275 @@ const Dashboard = ({ user }) => {
     </div>
   );
 };
+// ========== JOBS PAGE (for Contractors) ==========
+const Jobs = () => {
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [bidAmount, setBidAmount] = useState('');
+  const [bidMessage, setBidMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({ trade: '', location: '' });
 
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/jobs`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setJobs(data.jobs || []);
+      } else {
+        setError(data.error || 'Failed to fetch jobs');
+      }
+    } catch (err) {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBid = async () => {
+    if (!bidAmount || parseFloat(bidAmount) <= 0) {
+      alert('Please enter a valid bid amount');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/bids`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ jobId: selectedJob.id, proposedRate: parseFloat(bidAmount), message: bidMessage })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setSuccessMessage(`✅ Bid submitted successfully for ${selectedJob.title}!`);
+        setSelectedJob(null);
+        setBidAmount('');
+        setBidMessage('');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        fetchJobs();
+      } else {
+        alert(data.error || 'Failed to submit bid');
+      }
+    } catch (err) {
+      alert('Network error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const filteredJobs = jobs.filter(job => {
+    if (searchTerm && !job.title.toLowerCase().includes(searchTerm.toLowerCase()) && !job.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (filters.trade && job.trade !== filters.trade) return false;
+    if (filters.location && !job.location.toLowerCase().includes(filters.location.toLowerCase())) return false;
+    return true;
+  });
+
+  const trades = ['', 'ELECTRICIAN', 'PLUMBER', 'HVAC', 'CARPENTER', 'MASON', 'PAINTER', 'ROOFER', 'OTHER'];
+
+  if (loading) {
+    return <div style={styles.loading}>Loading jobs...</div>;
+  }
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Find Jobs</h1>
+        <p style={styles.subtitle}>{filteredJobs.length} jobs available</p>
+      </div>
+
+      {successMessage && <div style={styles.successMessage}>{successMessage}</div>}
+      {error && <div style={styles.errorMsg}>{error}</div>}
+
+      <div style={styles.searchBar}>
+        <input type="text" placeholder="Search jobs..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInput} />
+        <select value={filters.trade} onChange={(e) => setFilters({ ...filters, trade: e.target.value })} style={styles.filterSelect}>
+          {trades.map(t => <option key={t} value={t}>{t || 'All Trades'}</option>)}
+        </select>
+        <input type="text" placeholder="Location" value={filters.location} onChange={(e) => setFilters({ ...filters, location: e.target.value })} style={styles.filterInput} />
+        <button onClick={() => { setSearchTerm(''); setFilters({ trade: '', location: '' }); }} style={styles.resetBtn}>Reset</button>
+      </div>
+
+      {filteredJobs.length === 0 ? (
+        <div style={styles.noJobs}>
+          <p>No jobs found. Try adjusting your filters.</p>
+        </div>
+      ) : (
+        <div style={styles.jobsGrid}>
+          {filteredJobs.map(job => (
+            <div key={job.id} style={styles.jobCard}>
+              <div style={styles.jobHeader}>
+                <span style={styles.jobTrade}>{job.trade}</span>
+                <span style={styles.jobStatus}>Open</span>
+              </div>
+              <h3 style={styles.jobTitle}>{job.title}</h3>
+              <p style={styles.jobDescription}>{job.description}</p>
+              <div style={styles.jobDetails}>
+                <span>📍 {job.location}</span>
+                <span>📅 {new Date(job.startDate).toLocaleDateString()}</span>
+                <span>⏰ {job.hours} hrs</span>
+                <span>💰 ${job.rateMin} - ${job.rateMax}/hr</span>
+              </div>
+              <button onClick={() => setSelectedJob(job)} style={styles.bidBtn}>Submit Bid →</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedJob && (
+        <div style={styles.modalOverlay} onClick={() => setSelectedJob(null)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h2>Submit Bid</h2>
+              <button style={styles.modalClose} onClick={() => setSelectedJob(null)}>✕</button>
+            </div>
+            <div style={styles.modalJobInfo}>
+              <h3>{selectedJob.title}</h3>
+              <p>{selectedJob.description}</p>
+              <div><span>📍 {selectedJob.location}</span> | <span>💰 ${selectedJob.rateMin} - ${selectedJob.rateMax}/hr</span></div>
+            </div>
+            <div style={styles.modalForm}>
+              <label>Your Bid Rate ($/hour) *</label>
+              <input type="number" value={bidAmount} onChange={(e) => setBidAmount(e.target.value)} placeholder={`Suggested: $${selectedJob.rateMin} - ${selectedJob.rateMax}`} style={styles.modalInput} />
+              <label>Message (optional)</label>
+              <textarea value={bidMessage} onChange={(e) => setBidMessage(e.target.value)} placeholder="Introduce yourself..." rows="3" style={styles.modalTextarea} />
+              <div style={styles.modalActions}>
+                <button onClick={handleBid} disabled={submitting} style={styles.submitBtn}>{submitting ? 'Submitting...' : 'Submit Bid'}</button>
+                <button onClick={() => setSelectedJob(null)} style={styles.cancelBtn}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ========== POST JOB PAGE (for GCs) ==========
+const PostJob = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    title: '', trade: 'ELECTRICIAN', description: '', location: '',
+    startDate: '', endDate: '', hours: '', rateMin: '', rateMax: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const trades = ['ELECTRICIAN', 'PLUMBER', 'HVAC', 'CARPENTER', 'MASON', 'PAINTER', 'ROOFER', 'OTHER'];
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/jobs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(formData)
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setMessage('✅ Job posted successfully!');
+        setTimeout(() => navigate('/my-jobs'), 2000);
+      } else {
+        setError(data.error || 'Failed to post job');
+      }
+    } catch (err) {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={postStyles.container}>
+      <div style={postStyles.card}>
+        <h1 style={postStyles.title}>Post a New Job</h1>
+        <p style={postStyles.subtitle}>Fill out the details below to find qualified contractors</p>
+        {message && <div style={postStyles.successMessage}>{message}</div>}
+        {error && <div style={postStyles.errorMessage}>{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <div style={postStyles.formGroup}><label>Job Title *</label><input type="text" name="title" value={formData.title} onChange={handleChange} required placeholder="e.g., Commercial Electrical Installation" style={postStyles.input} /></div>
+          <div style={postStyles.formGroup}><label>Trade *</label><select name="trade" value={formData.trade} onChange={handleChange} required style={postStyles.select}>{trades.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+          <div style={postStyles.formGroup}><label>Description *</label><textarea name="description" value={formData.description} onChange={handleChange} required rows="4" placeholder="Describe the scope of work..." style={postStyles.textarea} /></div>
+          <div style={postStyles.formGroup}><label>Location *</label><input type="text" name="location" value={formData.location} onChange={handleChange} required placeholder="City, State" style={postStyles.input} /></div>
+          <div style={postStyles.row}><div style={postStyles.formGroup}><label>Start Date *</label><input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required style={postStyles.input} /></div><div style={postStyles.formGroup}><label>End Date *</label><input type="date" name="endDate" value={formData.endDate} onChange={handleChange} required style={postStyles.input} /></div></div>
+          <div style={postStyles.row}><div style={postStyles.formGroup}><label>Hours *</label><input type="number" name="hours" value={formData.hours} onChange={handleChange} required placeholder="Total hours" style={postStyles.input} /></div><div style={postStyles.formGroup}><label>Min Rate ($/hr)</label><input type="number" name="rateMin" value={formData.rateMin} onChange={handleChange} placeholder="Minimum" style={postStyles.input} /></div><div style={postStyles.formGroup}><label>Max Rate ($/hr)</label><input type="number" name="rateMax" value={formData.rateMax} onChange={handleChange} placeholder="Maximum" style={postStyles.input} /></div></div>
+          <button type="submit" disabled={loading} style={postStyles.submitBtn}>{loading ? 'Posting...' : 'Post Job'}</button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const postStyles = {
+  container: { minHeight: '100vh', background: '#F9FAFB', padding: '2rem', display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  card: { maxWidth: '800px', width: '100%', background: 'white', borderRadius: '20px', padding: '2rem', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' },
+  title: { fontSize: '1.8rem', color: '#1F2937', marginBottom: '0.5rem' },
+  subtitle: { color: '#6B7280', marginBottom: '2rem' },
+  formGroup: { marginBottom: '1.5rem', flex: 1 },
+  row: { display: 'flex', gap: '1rem', flexWrap: 'wrap' },
+  input: { width: '100%', padding: '0.75rem', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '1rem' },
+  select: { width: '100%', padding: '0.75rem', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '1rem', background: 'white' },
+  textarea: { width: '100%', padding: '0.75rem', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '1rem', fontFamily: 'inherit' },
+  submitBtn: { width: '100%', padding: '0.875rem', background: '#0F4C5F', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' },
+  successMessage: { background: '#D1FAE5', color: '#065F46', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem' },
+  errorMessage: { background: '#FEE2E2', color: '#991B1B', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem' }
+};
+
+// ========== STYLES FOR JOBS PAGE ==========
+const jobsStyles = {
+  container: { maxWidth: '1400px', margin: '0 auto', padding: '2rem', minHeight: '100vh', background: '#F9FAFB' },
+  header: { marginBottom: '2rem' },
+  title: { fontSize: '2rem', color: '#1F2937', marginBottom: '0.25rem' },
+  subtitle: { color: '#6B7280' },
+  searchBar: { display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
+  searchInput: { flex: 2, padding: '0.75rem', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '1rem' },
+  filterSelect: { flex: 1, padding: '0.75rem', border: '1px solid #E5E7EB', borderRadius: '8px', background: 'white' },
+  filterInput: { flex: 1, padding: '0.75rem', border: '1px solid #E5E7EB', borderRadius: '8px' },
+  resetBtn: { padding: '0.75rem 1.5rem', background: '#F3F4F6', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+  jobsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' },
+  jobCard: { background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
+  jobHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' },
+  jobTrade: { background: '#EFF6FF', color: '#0F4C5F', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600' },
+  jobStatus: { background: '#D1FAE5', color: '#065F46', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600' },
+  jobTitle: { fontSize: '1.25rem', fontWeight: '600', color: '#1F2937', marginBottom: '0.75rem' },
+  jobDescription: { color: '#6B7280', marginBottom: '1rem', lineHeight: '1.5' },
+  jobDetails: { display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #F3F4F6', fontSize: '0.875rem', color: '#4B5563' },
+  bidBtn: { width: '100%', background: '#0F4C5F', color: 'white', padding: '0.75rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' },
+  loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '1.2rem' },
+  errorMsg: { background: '#FEE2E2', color: '#991B1B', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem' },
+  successMessage: { background: '#D1FAE5', color: '#065F46', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', textAlign: 'center' },
+  noJobs: { textAlign: 'center', padding: '4rem', background: 'white', borderRadius: '16px' },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: 'white', borderRadius: '20px', maxWidth: '600px', width: '90%', maxHeight: '90vh', overflow: 'auto' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #E5E7EB' },
+  modalClose: { background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' },
+  modalJobInfo: { padding: '1.5rem', borderBottom: '1px solid #E5E7EB' },
+  modalForm: { padding: '1.5rem' },
+  modalInput: { width: '100%', padding: '0.75rem', border: '1px solid #E5E7EB', borderRadius: '8px', marginBottom: '1rem', marginTop: '0.25rem' },
+  modalTextarea: { width: '100%', padding: '0.75rem', border: '1px solid #E5E7EB', borderRadius: '8px', marginBottom: '1rem', marginTop: '0.25rem', fontFamily: 'inherit' },
+  modalActions: { display: 'flex', gap: '1rem', marginTop: '1rem' },
+  submitBtn: { flex: 1, background: '#0F4C5F', color: 'white', padding: '0.75rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' },
+  cancelBtn: { flex: 1, background: '#F3F4F6', color: '#4B5563', padding: '0.75rem', border: 'none', borderRadius: '8px', cursor: 'pointer' }
+};
 // ========== HOW IT WORKS PAGE ==========
 const HowItWorks = () => (
   <div style={styles.pagePlaceholder}>
@@ -324,14 +592,14 @@ const App = () => {
       {!user && <Navbar user={null} onLogout={() => {}} />}
       <Routes>
         <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
-        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
-        <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register onLogin={handleLogin} />} />
-        <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
-        <Route path="/post-job" element={user && user.role === 'GC' ? <PostJob /> : <Navigate to="/dashboard" />} />
-        <Route path="/jobs" element={user && user.role === 'CONTRACTOR' ? <Jobs /> : <Navigate to="/dashboard" />} />
-        <Route path="/my-bids" element={user && user.role === 'CONTRACTOR' ? <MyBids /> : <Navigate to="/dashboard" />} />
-        <Route path="/my-jobs" element={user && user.role === 'GC' ? <MyJobs /> : <Navigate to="/dashboard" />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
+  <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
+  <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register onLogin={handleLogin} />} />
+  <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/login" />} />
+  <Route path="/post-job" element={user && user.role === 'GC' ? <PostJob /> : <Navigate to="/dashboard" />} />
+  <Route path="/jobs" element={user && user.role === 'CONTRACTOR' ? <Jobs /> : <Navigate to="/dashboard" />} />
+  <Route path="/my-bids" element={<div style={styles.pagePlaceholder}>My Bids - Coming Soon</div>} />
+  <Route path="/my-jobs" element={<div style={styles.pagePlaceholder}>My Jobs - Coming Soon</div>} />
+  <Route path="/how-it-works" element={<HowItWorks />} />
       </Routes>
     </Router>
   );
