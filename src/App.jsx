@@ -202,10 +202,9 @@ function Login() {
     </div>
   );
 }
-
 // Register Page Component
 function Register() {
-  const [formData, setFormData] = React.useState({
+  const [formData, setFormData] React.useState({
     name: '',
     email: '',
     password: '',
@@ -231,6 +230,14 @@ function Register() {
     setMessage('');
     
     try {
+      // 🔍 DEBUG: Log what we're sending
+      console.log('📤 Sending registration data:', {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        companyName: formData.companyName
+      });
+      
       const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/register`, {
         method: 'POST',
         headers: {
@@ -245,19 +252,42 @@ function Register() {
         }),
       });
       
+      // 🔍 DEBUG: Log the response status
+      console.log('📥 Response status:', response.status);
+      
       const data = await response.json();
       
+      // 🔍 DEBUG: Log the full response
+      console.log('📦 Response data:', data);
+      
       if (response.ok) {
+        // 🔍 DEBUG: Log if we got a token
+        console.log('✅ Token received:', data.token);
+        console.log('✅ User received:', data.user);
+        
         setMessage('Registration successful! Redirecting...');
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Check if token exists before saving
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+        } else {
+          console.error('❌ No token in response!');
+          setError('No token received from server');
+          setLoading(false);
+          return;
+        }
+        
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 2000);
       } else {
+        console.error('❌ Registration failed:', data.error);
         setError(data.error || 'Registration failed');
       }
     } catch (err) {
+      // 🔍 DEBUG: Log any errors
+      console.error('❌ Network error:', err);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
