@@ -12,9 +12,7 @@ const MyJobs = () => {
   const [bids, setBids] = useState([]);
   const [showBidsModal, setShowBidsModal] = useState(false);
 
-  useEffect(() => {
-    fetchMyJobs();
-  }, []);
+  useEffect(() => { fetchMyJobs(); }, []);
 
   const fetchMyJobs = async () => {
     try {
@@ -57,10 +55,7 @@ const MyJobs = () => {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/bids/${bidId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ status: 'ACCEPTED' })
       });
       const data = await response.json();
@@ -81,10 +76,7 @@ const MyJobs = () => {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/bids/${bidId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ status: 'REJECTED' })
       });
       const data = await response.json();
@@ -114,9 +106,7 @@ const MyJobs = () => {
     return <span style={{ padding: '0.25rem 0.75rem', background: s.background, color: s.color, borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600' }}>{s.text}</span>;
   };
 
-  if (loading) {
-    return <div style={styles.loading}>Loading your jobs...</div>;
-  }
+  if (loading) return <div style={styles.loading}>Loading your jobs...</div>;
 
   return (
     <div style={styles.container}>
@@ -124,9 +114,7 @@ const MyJobs = () => {
         <h1 style={styles.title}>My Jobs</h1>
         <button onClick={() => navigate('/post-job')} style={styles.postBtn}>+ Post New Job</button>
       </div>
-
       {error && <div style={styles.error}>{error}</div>}
-
       {jobs.length === 0 ? (
         <div style={styles.empty}>
           <span style={styles.emptyIcon}>📋</span>
@@ -139,10 +127,7 @@ const MyJobs = () => {
           {jobs.map(job => (
             <div key={job.id} style={styles.jobCard}>
               <div style={styles.jobHeader}>
-                <div>
-                  <h3 style={styles.jobTitle}>{job.title}</h3>
-                  <span style={styles.jobDate}>Posted: {new Date(job.createdAt).toLocaleDateString()}</span>
-                </div>
+                <div><h3 style={styles.jobTitle}>{job.title}</h3><span style={styles.jobDate}>Posted: {new Date(job.createdAt).toLocaleDateString()}</span></div>
                 {getStatusBadge(job.status)}
               </div>
               <p style={styles.jobDescription}>{job.description}</p>
@@ -152,50 +137,23 @@ const MyJobs = () => {
                 <span>⏰ {job.hours} hours</span>
                 <span>💰 ${job.rateMin} - ${job.rateMax}/hr</span>
               </div>
-              <button
-                onClick={() => openBidsModal(job)}
-                disabled={job.status !== 'OPEN'}
-                style={{ ...styles.viewBidsBtn, ...(job.status !== 'OPEN' && styles.disabledBtn) }}
-              >
-                {job.status === 'OPEN' ? 'View Bids' : 'Job Filled'}
-              </button>
+              <button onClick={() => openBidsModal(job)} disabled={job.status !== 'OPEN'} style={{ ...styles.viewBidsBtn, ...(job.status !== 'OPEN' && styles.disabledBtn) }}>{job.status === 'OPEN' ? 'View Bids' : 'Job Filled'}</button>
             </div>
           ))}
         </div>
       )}
-
-      {/* Bids Modal */}
       {showBidsModal && selectedJob && (
         <div style={styles.modalOverlay} onClick={() => setShowBidsModal(false)}>
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h2>Bids for {selectedJob.title}</h2>
-              <button style={styles.modalClose} onClick={() => setShowBidsModal(false)}>✕</button>
-            </div>
-            {bids.length === 0 ? (
-              <div style={styles.noBids}>No bids yet for this job.</div>
-            ) : (
-              <div style={styles.bidsList}>
-                {bids.map(bid => (
-                  <div key={bid.id} style={styles.bidCard}>
-                    <div style={styles.bidHeader}>
-                      <span style={styles.bidAmount}>${bid.proposedRate}/hour</span>
-                      <span style={{ ...styles.bidStatus, ...(bid.status === 'PENDING' ? styles.pending : bid.status === 'ACCEPTED' ? styles.accepted : styles.rejected) }}>
-                        {bid.status}
-                      </span>
-                    </div>
-                    <p><strong>From:</strong> {bid.contractorEmail}</p>
-                    {bid.message && <p><strong>Message:</strong> {bid.message}</p>}
-                    {bid.status === 'PENDING' && (
-                      <div style={styles.bidActions}>
-                        <button onClick={() => handleAcceptBid(bid.id)} style={styles.acceptBtn}>Accept</button>
-                        <button onClick={() => handleRejectBid(bid.id)} style={styles.rejectBtn}>Reject</button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            <div style={styles.modalHeader}><h2>Bids for {selectedJob.title}</h2><button style={styles.modalClose} onClick={() => setShowBidsModal(false)}>✕</button></div>
+            {bids.length === 0 ? <div style={styles.noBids}>No bids yet for this job.</div> : bids.map(bid => (
+              <div key={bid.id} style={styles.bidCard}>
+                <div style={styles.bidHeader}><span style={styles.bidAmount}>${bid.proposedRate}/hour</span><span style={{ ...styles.bidStatus, ...(bid.status === 'PENDING' ? styles.pending : bid.status === 'ACCEPTED' ? styles.accepted : styles.rejected) }}>{bid.status}</span></div>
+                <p><strong>From:</strong> {bid.contractorEmail}</p>
+                {bid.message && <p><strong>Message:</strong> {bid.message}</p>}
+                {bid.status === 'PENDING' && (<div style={styles.bidActions}><button onClick={() => handleAcceptBid(bid.id)} style={styles.acceptBtn}>Accept</button><button onClick={() => handleRejectBid(bid.id)} style={styles.rejectBtn}>Reject</button></div>)}
               </div>
-            )}
+            ))}
           </div>
         </div>
       )}
@@ -227,7 +185,6 @@ const styles = {
   modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #E5E7EB' },
   modalClose: { background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' },
   noBids: { textAlign: 'center', padding: '2rem', color: '#6B7280' },
-  bidsList: { padding: '1rem' },
   bidCard: { border: '1px solid #E5E7EB', borderRadius: '8px', padding: '1rem', marginBottom: '1rem' },
   bidHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
   bidAmount: { fontSize: '1.2rem', fontWeight: 'bold', color: '#0F4C5F' },
