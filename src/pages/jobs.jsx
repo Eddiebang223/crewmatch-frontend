@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://crewmatch-backend-production.up.railway.app/api';
 
@@ -14,12 +14,7 @@ const Jobs = () => {
   const [bidMessage, setBidMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [filters, setFilters] = useState({
-    trade: '',
-    location: '',
-    minRate: '',
-    maxRate: ''
-  });
+  const [filters, setFilters] = useState({ trade: '', location: '', minRate: '', maxRate: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [savedJobs, setSavedJobs] = useState([]);
@@ -36,26 +31,17 @@ const Jobs = () => {
   const fetchJobs = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Fetching jobs with token:', token ? 'Yes' : 'No');
-      
       const response = await fetch(`${API_URL}/jobs`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       const data = await response.json();
-      console.log('Jobs response:', data);
-      
       if (response.ok) {
         setJobs(data.jobs || []);
       } else {
         setError(data.error || 'Failed to fetch jobs');
       }
     } catch (err) {
-      console.error('Fetch error:', err);
-      setError('Network error. Please try again.');
+      setError('Network error');
     } finally {
       setLoading(false);
     }
@@ -63,9 +49,7 @@ const Jobs = () => {
 
   const loadSavedJobs = () => {
     const saved = localStorage.getItem('savedJobs');
-    if (saved) {
-      setSavedJobs(JSON.parse(saved));
-    }
+    if (saved) setSavedJobs(JSON.parse(saved));
   };
 
   const saveJob = (jobId) => {
@@ -85,7 +69,6 @@ const Jobs = () => {
 
   const applyFilters = () => {
     let filtered = [...jobs];
-
     if (searchTerm) {
       filtered = filtered.filter(job =>
         job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -93,25 +76,10 @@ const Jobs = () => {
         job.location.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
-    if (filters.trade) {
-      filtered = filtered.filter(job => job.trade === filters.trade);
-    }
-
-    if (filters.location) {
-      filtered = filtered.filter(job =>
-        job.location.toLowerCase().includes(filters.location.toLowerCase())
-      );
-    }
-
-    if (filters.minRate) {
-      filtered = filtered.filter(job => job.rateMin >= parseFloat(filters.minRate));
-    }
-
-    if (filters.maxRate) {
-      filtered = filtered.filter(job => job.rateMax <= parseFloat(filters.maxRate));
-    }
-
+    if (filters.trade) filtered = filtered.filter(job => job.trade === filters.trade);
+    if (filters.location) filtered = filtered.filter(job => job.location.toLowerCase().includes(filters.location.toLowerCase()));
+    if (filters.minRate) filtered = filtered.filter(job => job.rateMin >= parseFloat(filters.minRate));
+    if (filters.maxRate) filtered = filtered.filter(job => job.rateMax <= parseFloat(filters.maxRate));
     setFilteredJobs(filtered);
   };
 
@@ -120,25 +88,15 @@ const Jobs = () => {
       alert('Please enter a valid bid amount');
       return;
     }
-
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/bids`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          jobId: selectedJob.id,
-          proposedRate: parseFloat(bidAmount),
-          message: bidMessage
-        })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ jobId: selectedJob.id, proposedRate: parseFloat(bidAmount), message: bidMessage })
       });
-
       const data = await response.json();
-
       if (response.ok) {
         setSuccessMessage(`✅ Bid submitted successfully for ${selectedJob.title}!`);
         setSelectedJob(null);
@@ -150,38 +108,26 @@ const Jobs = () => {
         alert(data.error || 'Failed to submit bid');
       }
     } catch (err) {
-      alert('Network error. Please try again.');
+      alert('Network error');
     } finally {
       setSubmitting(false);
     }
   };
 
   const resetFilters = () => {
-    setFilters({
-      trade: '',
-      location: '',
-      minRate: '',
-      maxRate: ''
-    });
+    setFilters({ trade: '', location: '', minRate: '', maxRate: '' });
     setSearchTerm('');
   };
 
   const getRateDisplay = (job) => {
-    if (job.rateMin && job.rateMax) {
-      return `$${job.rateMin} - $${job.rateMax}/hr`;
-    } else if (job.rateMin) {
-      return `From $${job.rateMin}/hr`;
-    } else if (job.rateMax) {
-      return `Up to $${job.rateMax}/hr`;
-    }
+    if (job.rateMin && job.rateMax) return `$${job.rateMin} - $${job.rateMax}/hr`;
+    if (job.rateMin) return `From $${job.rateMin}/hr`;
+    if (job.rateMax) return `Up to $${job.rateMax}/hr`;
     return 'Rate negotiable';
   };
 
   const getDaysLeft = (endDate) => {
-    const today = new Date();
-    const end = new Date(endDate);
-    const diffTime = end - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) return 'Expired';
     if (diffDays === 0) return 'Last day!';
     return `${diffDays} days left`;
@@ -201,9 +147,9 @@ const Jobs = () => {
 
   if (loading) {
     return (
-      <div style={styles.loadingContainer}>
+      <div style={styles.loading}>
         <div style={styles.spinner}></div>
-        <p>Loading available jobs...</p>
+        <p>Loading jobs...</p>
       </div>
     );
   }
@@ -226,12 +172,7 @@ const Jobs = () => {
       <div style={styles.searchBar}>
         <div style={styles.searchInput}>
           <span>🔍</span>
-          <input
-            type="text"
-            placeholder="Search jobs..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <input type="text" placeholder="Search jobs..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.searchInputField} />
         </div>
         <button onClick={resetFilters} style={styles.resetBtn}>Reset</button>
       </div>
@@ -327,6 +268,7 @@ const styles = {
   viewToggleActive: { background: '#0F4C5F', color: 'white', borderColor: '#0F4C5F' },
   searchBar: { display: 'flex', gap: '1rem', marginBottom: '1.5rem' },
   searchInput: { flex: 1, display: 'flex', alignItems: 'center', background: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '0.75rem 1rem', gap: '0.5rem' },
+  searchInputField: { flex: 1, border: 'none', outline: 'none', fontSize: '1rem' },
   resetBtn: { padding: '0.75rem 1.5rem', background: '#F3F4F6', border: 'none', borderRadius: '8px', cursor: 'pointer' },
   filtersRow: { display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
   filterSelect: { flex: 1, padding: '0.75rem', border: '1px solid #E5E7EB', borderRadius: '8px', background: 'white' },
@@ -351,7 +293,7 @@ const styles = {
   resetFiltersBtn: { marginTop: '1rem', padding: '0.5rem 1rem', background: '#0F4C5F', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' },
   successMessage: { background: '#D1FAE5', color: '#065F46', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', textAlign: 'center' },
   errorMsg: { background: '#FEE2E2', color: '#991B1B', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem' },
-  loadingContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '1rem' },
+  loading: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '1rem' },
   spinner: { width: '40px', height: '40px', border: '3px solid #F3F4F6', borderTop: '3px solid #0F4C5F', borderRadius: '50%', animation: 'spin 1s linear infinite' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'white', borderRadius: '20px', maxWidth: '600px', width: '90%', maxHeight: '90vh', overflow: 'auto' },
@@ -367,7 +309,6 @@ const styles = {
   cancelBtn: { flex: 1, background: '#F3F4F6', color: '#4B5563', padding: '0.75rem', border: 'none', borderRadius: '8px', cursor: 'pointer' }
 };
 
-// Add animation
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
 document.head.appendChild(styleSheet);
