@@ -415,8 +415,226 @@ function Register() {
     </div>
   );
 }
+function Dashboard() {
+  const [user, setUser] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
+  }, []);
+  
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+  };
+  
+  if (loading) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      }}>
+        <h2 style={{ color: 'white' }}>Loading...</h2>
+      </div>
+    );
+  }
+  
+  return (
+    <div style={{ 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '20px'
+    }}>
+      {/* Navigation Bar */}
+      <div style={{
+        background: 'white',
+        borderRadius: '10px',
+        padding: '15px 30px',
+        marginBottom: '30px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+      }}>
+        <h2 style={{ margin: 0, color: '#667eea' }}>🚀 CrewMatch</h2>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <span style={{ color: '#666' }}>Welcome, {user?.name || 'User'}!</span>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '8px 20px',
+              background: '#667eea',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+      
+      {/* Welcome Section */}
+      <div style={{
+        background: 'white',
+        borderRadius: '10px',
+        padding: '30px',
+        marginBottom: '30px',
+        textAlign: 'center',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+      }}>
+        <h1 style={{ color: '#333', marginBottom: '10px' }}>
+          Welcome to CrewMatch! 🎉
+        </h1>
+        <p style={{ color: '#666', fontSize: '18px' }}>
+          {user?.role === 'GC' 
+            ? 'Post jobs and find qualified contractors instantly.'
+            : 'Find jobs and grow your contracting business.'}
+        </p>
+      </div>
+      
+      {/* Features Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '20px',
+        marginBottom: '30px'
+      }}>
+        {user?.role === 'GC' ? (
+          <>
+            <FeatureCard
+              icon="📋"
+              title="Post New Job"
+              description="Create a job posting for contractors to bid on"
+              buttonText="Post Job"
+              onClick={() => window.location.href = '/post-job'}
+            />
+            <FeatureCard
+              icon="👥"
+              title="View Jobs"
+              description="See all your active and past jobs"
+              buttonText="View Jobs"
+              onClick={() => window.location.href = '/my-jobs'}
+            />
+            <FeatureCard
+              icon="💳"
+              title="Payments"
+              description="Manage payments and invoices"
+              buttonText="View Payments"
+              onClick={() => window.location.href = '/payments'}
+            />
+          </>
+        ) : (
+          <>
+            <FeatureCard
+              icon="🔍"
+              title="Find Jobs"
+              description="Browse available jobs in your area"
+              buttonText="Browse Jobs"
+              onClick={() => window.location.href = '/jobs'}
+            />
+            <FeatureCard
+              icon="📝"
+              title="My Bids"
+              description="Track your submitted bids"
+              buttonText="View Bids"
+              onClick={() => window.location.href = '/my-bids'}
+            />
+            <FeatureCard
+              icon="💰"
+              title="Earnings"
+              description="Track your completed jobs and earnings"
+              buttonText="View Earnings"
+              onClick={() => window.location.href = '/earnings'}
+            />
+          </>
+        )}
+      </div>
+      
+      {/* Quick Stats */}
+      <div style={{
+        background: 'white',
+        borderRadius: '10px',
+        padding: '20px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+      }}>
+        <h3 style={{ marginBottom: '15px', color: '#333' }}>Quick Stats</h3>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '20px'
+        }}>
+          <StatBox number="0" label="Active Jobs" />
+          <StatBox number="0" label="Completed" />
+          <StatBox number="0" label="Total Earned" />
+          <StatBox number="⭐ 0.0" label="Rating" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-// Main App Component
+// Feature Card Component - Add this after Dashboard
+function FeatureCard({ icon, title, description, buttonText, onClick }) {
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: '10px',
+      padding: '25px',
+      textAlign: 'center',
+      transition: 'transform 0.2s',
+      cursor: 'pointer',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+    }}
+    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+    >
+      <div style={{ fontSize: '48px', marginBottom: '15px' }}>{icon}</div>
+      <h3 style={{ marginBottom: '10px', color: '#333' }}>{title}</h3>
+      <p style={{ color: '#666', marginBottom: '20px' }}>{description}</p>
+      <button
+        onClick={onClick}
+        style={{
+          padding: '10px 20px',
+          background: '#667eea',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }}
+      >
+        {buttonText}
+      </button>
+    </div>
+  );
+}
+
+// Stat Box Component - Add this after FeatureCard
+function StatBox({ number, label }) {
+  return (
+    <div style={{
+      textAlign: 'center',
+      padding: '15px',
+      background: '#f8f9fa',
+      borderRadius: '8px'
+    }}>
+      <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#667eea' }}>{number}</div>
+      <div style={{ color: '#666', marginTop: '5px' }}>{label}</div>
+    </div>
+  );
+}
+
+// ========== EXISTING APP COMPONENT - UPDATE THE ROUTES ==========
 function App() {
   return (
     <Router>
@@ -424,9 +642,11 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />  {/* ← ADD THIS LINE */}
       </Routes>
     </Router>
   );
 }
 
-export default App; 
+export default App;
+
