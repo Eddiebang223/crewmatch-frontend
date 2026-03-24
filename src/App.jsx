@@ -204,7 +204,7 @@ function Login() {
 }
 // Register Page Component
 function Register() {
-  const [formData, setFormData] React.useState({
+  const [formData, setFormData] = React.useState({
     name: '',
     email: '',
     password: '',
