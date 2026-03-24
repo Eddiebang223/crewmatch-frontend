@@ -1,9 +1,10 @@
-import PostJob from './pages/PostJob';
-import MyBids from './pages/MyBids';
-import MyJobs from './pages/MyJobs';
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import Jobs from './pages/Jobs';
+import PostJob from './pages/PostJob';
+import MyBids from './pages/MyBids';
+import MyJobs from './pages/MyJobs';
 <Routes>
   <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
   <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
